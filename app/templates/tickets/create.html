@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}New Ticket{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card p-4">
+      <h3 class="mb-3">Submit a Ticket</h3>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.title.label(class="form-label") }}
+          {{ form.title(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.description.label(class="form-label") }}
+          {{ form.description(class="form-control", rows=5) }}
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.priority.label(class="form-label") }}
+            {{ form.priority(class="form-select") }}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.category.label(class="form-label") }}
+            {{ form.category(class="form-select") }}
+          </div>
+        </div>
+        {{ form.submit(class="btn btn-primary") }}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

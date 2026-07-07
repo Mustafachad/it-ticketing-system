@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>{{ "All Tickets" if current_user.is_tech else "My Tickets" }}</h3>
+  <a href="{{ url_for('tickets.create') }}" class="btn btn-primary">+ New Ticket</a>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <div class="text-muted small">Total</div>
+      <div class="fs-3">{{ tickets|length }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <div class="text-muted small">Open</div>
+      <div class="fs-3">{{ open_count }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center {% if overdue_count > 0 %}border-danger{% endif %}">
+      <div class="text-muted small">Overdue (SLA)</div>
+      <div class="fs-3 {% if overdue_count > 0 %}text-danger{% endif %}">{{ overdue_count }}</div>
+    </div>
+  </div>
+</div>
+
+<table class="table table-hover align-middle bg-white">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Title</th>
+      <th>Status</th>
+      <th>Priority</th>
+      <th>Category</th>
+      {% if current_user.is_tech %}<th>Assigned To</th>{% endif %}
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in tickets %}
+    <tr class="{% if t.is_overdue %}row-overdue{% endif %}" onclick="window.location='{{ url_for('tickets.view', ticket_id=t.id) }}'" style="cursor:pointer;">
+      <td>{{ t.id }}</td>
+      <td>{{ t.title }}{% if t.is_overdue %} <span class="badge bg-danger">SLA overdue</span>{% endif %}</td>
+      <td><span class="badge bg-info text-dark">{{ t.status.replace('_', ' ').title() }}</span></td>
+      <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
+      <td>{{ t.category.title() }}</td>
+      {% if current_user.is_tech %}<td>{{ t.assignee.username if t.assignee else "—" }}</td>{% endif %}
+      <td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-center text-muted py-4">No tickets yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

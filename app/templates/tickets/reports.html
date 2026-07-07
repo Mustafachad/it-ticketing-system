@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h3 class="mb-4">Reports</h3>
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="text-muted small">Total Tickets</div>
+      <div class="fs-3">{{ total }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="text-muted small">Avg. Resolution Time</div>
+      <div class="fs-3">{{ avg_resolution if avg_resolution is not none else "—" }}{% if avg_resolution %}h{% endif %}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center border-danger">
+      <div class="text-muted small">Overdue (SLA breach)</div>
+      <div class="fs-3 text-danger">{{ overdue|length }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card p-3 mb-4">
+      <h5>By Status</h5>
+      <table class="table table-sm">
+        {% for status, count in by_status.items() %}
+        <tr><td>{{ status.replace('_', ' ').title() }}</td><td>{{ count }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3 mb-4">
+      <h5>By Category</h5>
+      <table class="table table-sm">
+        {% for category, count in by_category.items() %}
+        <tr><td>{{ category.title() }}</td><td>{{ count }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card p-3">
+  <h5>Currently Overdue Tickets</h5>
+  <table class="table table-sm">
+    <thead><tr><th>#</th><th>Title</th><th>Priority</th><th>SLA Deadline</th><th>Assigned To</th></tr></thead>
+    <tbody>
+      {% for t in overdue %}
+      <tr>
+        <td><a href="{{ url_for('tickets.view', ticket_id=t.id) }}">#{{ t.id }}</a></td>
+        <td>{{ t.title }}</td>
+        <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
+        <td>{{ t.sla_deadline.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ t.assignee.username if t.assignee else "Unassigned" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-center text-muted">Nothing overdue. 🎉</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
