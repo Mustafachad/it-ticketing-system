@@ -44,7 +44,7 @@ Demo logins (all use the same password `demopass123`):
   - *Admins* see the full queue (including unassigned intake), can reassign tickets between agents, and get an SLA breach/at-risk report.
 - **Ticket lifecycle**: open → in progress → resolved/closed, with a resolution-time calculation and a comment thread per ticket for history.
 - **Audit log**, recorded server-side on every creation/update/comment and surfaced as a "Recent Activity" feed on the admin reports page — not just written to the database and never looked at again.
-- **Rate-limited login** (10 attempts/minute per IP via Flask-Limiter) to slow down brute-force password guessing.
+- **Rate-limited login** (10 attempts/minute per IP via Flask-Limiter). Uses a true moving window rather than the library's default fixed-clock-aligned window - a fixed window resets exactly at each new minute, so a burst right at that boundary (e.g. 9 attempts at :59, 9 more at :00) can let through nearly twice the intended limit in a couple of seconds. A moving window closes that gap.
 - Password hashing via bcrypt, CSRF protection on all forms (Flask-WTF), session auth via Flask-Login.
 
 ## Tech stack

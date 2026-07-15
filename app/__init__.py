@@ -9,7 +9,14 @@ from flask_limiter.util import get_remote_address
 db = SQLAlchemy()
 login_manager = LoginManager()
 bcrypt = Bcrypt()
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[],
+    strategy="moving-window",  # true rolling window, not calendar-clock-aligned
+                                # (fixed-window would let ~2x the limit through
+                                # right at a minute boundary - e.g. 9 requests
+                                # at :59 and 9 more at :00, all allowed)
+)
 
 
 def create_app(config_overrides=None):

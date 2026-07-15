@@ -1,4 +1,4 @@
-from app import create_app, db as _db
+from app import create_app, limiter, db as _db
 from tests.conftest import make_user
 
 
@@ -35,3 +35,22 @@ def test_login_is_rate_limited():
     # The first several attempts should still be handled normally (200 = form
     # re-rendered with an "invalid password" flash), not immediately blocked.
     assert statuses[0] == 200
+
+
+def test_rate_limiter_uses_moving_window_strategy():
+    """Flask-Limiter's default is a *fixed* window - it counts requests per
+    calendar-clock-aligned bucket (e.g. resets exactly at :00 of each minute),
+    not a rolling 60 seconds from the first request. That has a real
+    weakness: someone could send 9 requests at :59 and 9 more at :00 and get
+    18 through in ~2 seconds, since each burst lands in a different bucket.
+
+    This was caught during manual testing: clicks spread across several
+    calendar minutes (4, 4, 10, then 7 per minute) never tripped the limiter,
+    even though 25 total attempts were made well within a few minutes.
+
+    We use "moving-window" instead, which tracks a true rolling window
+    regardless of clock alignment. This test just confirms that
+    configuration is actually in effect, rather than re-testing the timing
+    behavior itself with real sleeps (which would be slow and flaky).
+    """
+    assert limiter._strategy == "moving-window"
