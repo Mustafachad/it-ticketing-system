@@ -11,6 +11,13 @@ def app():
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "WTF_CSRF_ENABLED": False,  # simplifies posting forms directly in tests
+        # High ceiling so normal test flows (each logging in a handful of
+        # times) never trip it. Using a distinct limit string from the
+        # dedicated rate-limit test keeps their hit counters independent,
+        # since Flask-Limiter's default in-memory storage is shared across
+        # every create_app() call in this process - toggling RATELIMIT_ENABLED
+        # instead doesn't reliably reset between apps.
+        "LOGIN_RATE_LIMIT": "1000 per minute",
     })
 
     with application.app_context():

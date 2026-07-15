@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 
 from app import db
-from app.models import Ticket, User, Comment, STATUSES
+from app.models import Ticket, User, Comment, AuditLog, STATUSES
 from app.tickets.forms import TicketForm, TicketUpdateForm, CommentForm
 from app.utils import log_action
 
@@ -171,6 +171,10 @@ def reports():
     for t in all_tickets:
         by_category[t.category] = by_category.get(t.category, 0) + 1
 
+    recent_activity = (
+        AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(20).all()
+    )
+
     return render_template(
         "tickets/reports.html",
         total=total,
@@ -179,4 +183,5 @@ def reports():
         breached=breached,
         at_risk=at_risk,
         by_category=by_category,
+        recent_activity=recent_activity,
     )

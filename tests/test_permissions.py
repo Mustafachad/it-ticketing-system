@@ -1,4 +1,4 @@
-from app.models import Ticket
+from app.models import Ticket, AuditLog
 from tests.conftest import login
 
 
@@ -135,3 +135,33 @@ def test_reports_page_is_admin_only(client, db, users):
 
     login(client, "test_admin")
     assert client.get("/tickets/reports").status_code == 200
+
+
+def test_ticket_creation_is_logged_and_visible_to_admin(client, db, users):
+    login(client, "test_requester")
+    resp = client.post(
+        "/tickets/new",
+        data={
+            "title": "Printer jammed",
+            "description": "Paper jam on the 3rd floor printer",
+            "priority": "low",
+            "category": "hardware",
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+
+    ticket = Ticket.query.filter_by(title="Printer jammed").first()
+    assert ticket is not None
+
+    entry = AuditLog.query.filter_by(ticket_id=ticket.id).first()
+    assert entry is not None
+    assert "Created ticket" in entry.action
+    assert entry.user_id == users["requester"].id
+    client.get("/auth/logout")
+
+    login(client, "test_admin")
+    resp = client.get("/tickets/reports")
+    assert resp.status_code == 200
+    assert b"Recent Activity" in resp.data
+    assert f"Created ticket #{ticket.id}".encode() in resp.data

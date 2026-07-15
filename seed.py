@@ -14,7 +14,7 @@ Usage:
 from datetime import datetime, timedelta
 
 from app import create_app, db
-from app.models import User, Ticket, Comment
+from app.models import User, Ticket, Comment, AuditLog
 
 app = create_app()
 
@@ -111,6 +111,7 @@ def run():
 
         rows = build_tickets(users)
         tickets = []
+        audit_entries = []
         for (title, desc, priority, category, status, created_hrs, creator, assignee, resolved_hrs_after) in rows:
             created_at = hours_ago(created_hrs)
             ticket = Ticket(
@@ -131,6 +132,28 @@ def run():
             tickets.append(ticket)
         db.session.commit()
 
+        for ticket, (title, desc, priority, category, status, created_hrs, creator, assignee, resolved_hrs_after) in zip(tickets, rows):
+            audit_entries.append(AuditLog(
+                user_id=users[creator].id,
+                ticket_id=ticket.id,
+                action=f"Created ticket #{ticket.id}",
+                timestamp=ticket.created_at,
+            ))
+            if assignee:
+                audit_entries.append(AuditLog(
+                    user_id=users[creator].id,
+                    ticket_id=ticket.id,
+                    action=f"Assigned ticket #{ticket.id} to {assignee}",
+                    timestamp=ticket.created_at,
+                ))
+            if ticket.resolved_at:
+                audit_entries.append(AuditLog(
+                    user_id=users[assignee].id if assignee else users[creator].id,
+                    ticket_id=ticket.id,
+                    action=f"Updated ticket #{ticket.id} (status={status})",
+                    timestamp=ticket.resolved_at,
+                ))
+
         # A few comments for realism on a handful of tickets.
         sample_comments = [
             (tickets[0], "demo_agent", "Heading over to check the register now."),
@@ -140,7 +163,17 @@ def run():
             (tickets[10], "demo_agent", "Password reset and shared over the secure channel."),
         ]
         for ticket, username, body in sample_comments:
-            db.session.add(Comment(ticket_id=ticket.id, user_id=users[username].id, body=body))
+            comment_time = ticket.created_at + timedelta(minutes=20)
+            db.session.add(Comment(
+                ticket_id=ticket.id, user_id=users[username].id, body=body, created_at=comment_time,
+            ))
+            audit_entries.append(AuditLog(
+                user_id=users[username].id,
+                ticket_id=ticket.id,
+                action=f"Commented on ticket #{ticket.id}",
+                timestamp=comment_time,
+            ))
+        db.session.add_all(audit_entries)
         db.session.commit()
 
         print(f"Seeded {len(users)} users and {len(tickets)} tickets.")

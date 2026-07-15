@@ -92,4 +92,27 @@
     </tbody>
   </table>
 </div>
+
+<div class="card p-3 mt-4">
+  <h5>Recent Activity</h5>
+  <table class="table table-sm">
+    <thead><tr><th>When</th><th>User</th><th>Action</th><th>Ticket</th></tr></thead>
+    <tbody>
+      {% for entry in recent_activity %}
+      <tr>
+        <td class="text-nowrap">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ entry.user.username if entry.user else "—" }}</td>
+        <td>{{ entry.action }}</td>
+        <td>
+          {% if entry.ticket_id %}
+          <a href="{{ url_for('tickets.view', ticket_id=entry.ticket_id) }}">#{{ entry.ticket_id }}</a>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="text-center text-muted">No activity recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
