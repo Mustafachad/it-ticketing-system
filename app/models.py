@@ -4,10 +4,15 @@ from app import db, bcrypt
 
 # Plain strings instead of native DB enums, so this schema works identically
 # on SQLite (dev) and Postgres (prod) without enum migration headaches.
-ROLES = ("user", "tech", "admin")
+ROLES = ("requester", "agent", "admin")
 STATUSES = ("open", "in_progress", "resolved", "closed")
 PRIORITIES = ("low", "medium", "high", "critical")
 CATEGORIES = ("hardware", "software", "network", "account", "other")
+
+# Once a ticket has used up this fraction of its SLA window without being
+# resolved, it's flagged "at risk" even though it hasn't technically breached
+# yet. Gives agents a warning instead of only finding out after the fact.
+SLA_AT_RISK_THRESHOLD = 0.75
 
 # SLA target (in hours) per priority level - the whole SLA feature is
 # driven by this one dictionary.
@@ -26,7 +31,7 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(64), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default="user")
+    role = db.Column(db.String(20), nullable=False, default="requester")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     tickets_created = db.relationship(
@@ -43,12 +48,21 @@ class User(db.Model, UserMixin):
         return bcrypt.check_password_hash(self.password_hash, password)
 
     @property
-    def is_tech(self):
-        return self.role in ("tech", "admin")
+    def is_agent(self):
+        return self.role == "agent"
 
     @property
     def is_admin(self):
         return self.role == "admin"
+
+    @property
+    def is_requester(self):
+        return self.role == "requester"
+
+    @property
+    def is_staff(self):
+        """Agents and admins are both 'staff' - they work tickets rather than just file them."""
+        return self.role in ("agent", "admin")
 
     def __repr__(self):
         return f"<User {self.username} ({self.role})>"
@@ -81,10 +95,35 @@ class Ticket(db.Model):
         return self.created_at + timedelta(hours=target_hours)
 
     @property
-    def is_overdue(self):
+    def sla_status(self):
+        """Three-tier SLA status: 'on_time', 'at_risk', or 'breached'.
+
+        - Closed/resolved tickets are judged against when they were actually
+          resolved, so a ticket that was fixed in time stays 'on_time' forever
+          even after the clock keeps ticking.
+        - Open tickets past their deadline are 'breached'.
+        - Open tickets that have used up most of their SLA window (default:
+          75%) without being resolved are 'at_risk', so agents get a warning
+          before they blow the deadline rather than after.
+        """
         if self.status in ("resolved", "closed"):
-            return False
-        return datetime.utcnow() > self.sla_deadline
+            check_time = self.resolved_at or self.updated_at
+            return "breached" if check_time > self.sla_deadline else "on_time"
+
+        now = datetime.utcnow()
+        if now > self.sla_deadline:
+            return "breached"
+
+        window_seconds = (self.sla_deadline - self.created_at).total_seconds()
+        elapsed_seconds = (now - self.created_at).total_seconds()
+        if window_seconds > 0 and (elapsed_seconds / window_seconds) >= SLA_AT_RISK_THRESHOLD:
+            return "at_risk"
+        return "on_time"
+
+    @property
+    def is_overdue(self):
+        """Kept for backward compatibility / simple boolean checks (e.g. dashboard counts)."""
+        return self.sla_status == "breached"
 
     @property
     def resolution_time_hours(self):

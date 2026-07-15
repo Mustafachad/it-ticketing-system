@@ -17,9 +17,15 @@
     </div>
   </div>
   <div class="col-md-3">
+    <div class="card p-3 text-center border-warning">
+      <div class="text-muted small">At Risk (SLA)</div>
+      <div class="fs-3 text-warning">{{ at_risk|length }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
     <div class="card p-3 text-center border-danger">
-      <div class="text-muted small">Overdue (SLA breach)</div>
-      <div class="fs-3 text-danger">{{ overdue|length }}</div>
+      <div class="text-muted small">Breached (SLA)</div>
+      <div class="fs-3 text-danger">{{ breached|length }}</div>
     </div>
   </div>
 </div>
@@ -47,12 +53,12 @@
   </div>
 </div>
 
-<div class="card p-3">
-  <h5>Currently Overdue Tickets</h5>
+<div class="card p-3 mb-4">
+  <h5>Breached Tickets</h5>
   <table class="table table-sm">
     <thead><tr><th>#</th><th>Title</th><th>Priority</th><th>SLA Deadline</th><th>Assigned To</th></tr></thead>
     <tbody>
-      {% for t in overdue %}
+      {% for t in breached %}
       <tr>
         <td><a href="{{ url_for('tickets.view', ticket_id=t.id) }}">#{{ t.id }}</a></td>
         <td>{{ t.title }}</td>
@@ -61,7 +67,27 @@
         <td>{{ t.assignee.username if t.assignee else "Unassigned" }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="5" class="text-center text-muted">Nothing overdue. 🎉</td></tr>
+      <tr><td colspan="5" class="text-center text-muted">Nothing breached. 🎉</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card p-3">
+  <h5>At-Risk Tickets</h5>
+  <table class="table table-sm">
+    <thead><tr><th>#</th><th>Title</th><th>Priority</th><th>SLA Deadline</th><th>Assigned To</th></tr></thead>
+    <tbody>
+      {% for t in at_risk %}
+      <tr>
+        <td><a href="{{ url_for('tickets.view', ticket_id=t.id) }}">#{{ t.id }}</a></td>
+        <td>{{ t.title }}</td>
+        <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
+        <td>{{ t.sla_deadline.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ t.assignee.username if t.assignee else "Unassigned" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-center text-muted">Nothing at risk right now.</td></tr>
       {% endfor %}
     </tbody>
   </table>

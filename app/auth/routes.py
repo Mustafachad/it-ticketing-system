@@ -22,10 +22,10 @@ def register():
             flash("Username or email already in use.", "danger")
             return render_template("auth/register.html", form=form)
 
-        # All self-registered accounts start as regular users. Promotion to
-        # tech/admin is an intentional admin action, not something users can
+        # All self-registered accounts start as requesters. Promotion to
+        # agent/admin is an intentional admin action, not something users can
         # grant themselves.
-        user = User(username=form.username.data, email=form.email.data, role="user")
+        user = User(username=form.username.data, email=form.email.data, role="requester")
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()

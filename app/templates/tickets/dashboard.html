@@ -2,7 +2,12 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h3>{{ "All Tickets" if current_user.is_tech else "My Tickets" }}</h3>
+  <h3>
+    {% if current_user.is_admin %}All Tickets
+    {% elif current_user.is_agent %}My Queue
+    {% else %}My Tickets
+    {% endif %}
+  </h3>
   <a href="{{ url_for('tickets.create') }}" class="btn btn-primary">+ New Ticket</a>
 </div>
 
@@ -14,15 +19,15 @@
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card p-3 text-center">
-      <div class="text-muted small">Open</div>
-      <div class="fs-3">{{ open_count }}</div>
+    <div class="card p-3 text-center {% if at_risk_count > 0 %}border-warning{% endif %}">
+      <div class="text-muted small">At Risk (SLA)</div>
+      <div class="fs-3 {% if at_risk_count > 0 %}text-warning{% endif %}">{{ at_risk_count }}</div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card p-3 text-center {% if overdue_count > 0 %}border-danger{% endif %}">
-      <div class="text-muted small">Overdue (SLA)</div>
-      <div class="fs-3 {% if overdue_count > 0 %}text-danger{% endif %}">{{ overdue_count }}</div>
+    <div class="card p-3 text-center {% if breached_count > 0 %}border-danger{% endif %}">
+      <div class="text-muted small">Breached (SLA)</div>
+      <div class="fs-3 {% if breached_count > 0 %}text-danger{% endif %}">{{ breached_count }}</div>
     </div>
   </div>
 </div>
@@ -35,23 +40,30 @@
       <th>Status</th>
       <th>Priority</th>
       <th>Category</th>
-      {% if current_user.is_tech %}<th>Assigned To</th>{% endif %}
+      <th>SLA</th>
+      {% if current_user.is_admin %}<th>Assigned To</th>{% endif %}
       <th>Created</th>
     </tr>
   </thead>
   <tbody>
     {% for t in tickets %}
-    <tr class="{% if t.is_overdue %}row-overdue{% endif %}" onclick="window.location='{{ url_for('tickets.view', ticket_id=t.id) }}'" style="cursor:pointer;">
+    <tr class="{% if t.sla_status == 'breached' %}row-overdue{% endif %} clickable-row" data-href="{{ url_for('tickets.view', ticket_id=t.id) }}">
       <td>{{ t.id }}</td>
-      <td>{{ t.title }}{% if t.is_overdue %} <span class="badge bg-danger">SLA overdue</span>{% endif %}</td>
+      <td>{{ t.title }}</td>
       <td><span class="badge bg-info text-dark">{{ t.status.replace('_', ' ').title() }}</span></td>
       <td><span class="badge badge-priority-{{ t.priority }}">{{ t.priority.title() }}</span></td>
       <td>{{ t.category.title() }}</td>
-      {% if current_user.is_tech %}<td>{{ t.assignee.username if t.assignee else "—" }}</td>{% endif %}
+      <td>
+        {% if t.sla_status == 'breached' %}<span class="badge bg-danger">Breached</span>
+        {% elif t.sla_status == 'at_risk' %}<span class="badge bg-warning text-dark">At Risk</span>
+        {% else %}<span class="badge bg-success">On Time</span>
+        {% endif %}
+      </td>
+      {% if current_user.is_admin %}<td>{{ t.assignee.username if t.assignee else "—" }}</td>{% endif %}
       <td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="7" class="text-center text-muted py-4">No tickets yet.</td></tr>
+    <tr><td colspan="8" class="text-center text-muted py-4">No tickets yet.</td></tr>
     {% endfor %}
   </tbody>
 </table>

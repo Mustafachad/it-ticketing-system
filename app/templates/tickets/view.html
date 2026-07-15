@@ -4,7 +4,10 @@
 <div class="d-flex justify-content-between align-items-start mb-3">
   <div>
     <h3>#{{ ticket.id }} — {{ ticket.title }}
-      {% if ticket.is_overdue %}<span class="badge bg-danger">SLA overdue</span>{% endif %}
+      {% if ticket.sla_status == 'breached' %}<span class="badge bg-danger">SLA breached</span>
+      {% elif ticket.sla_status == 'at_risk' %}<span class="badge bg-warning text-dark">SLA at risk</span>
+      {% else %}<span class="badge bg-success">On time</span>
+      {% endif %}
     </h3>
     <span class="badge bg-info text-dark">{{ ticket.status.replace('_', ' ').title() }}</span>
     <span class="badge badge-priority-{{ ticket.priority }}">{{ ticket.priority.title() }}</span>
@@ -41,7 +44,8 @@
       </div>
       <div class="col-md-4 mb-3">
         {{ update_form.assigned_to_id.label(class="form-label") }}
-        {{ update_form.assigned_to_id(class="form-select") }}
+        {{ update_form.assigned_to_id(class="form-select", disabled=not current_user.is_admin) }}
+        {% if not current_user.is_admin %}<div class="form-text">Only admins can reassign tickets.</div>{% endif %}
       </div>
     </div>
     {{ update_form.update_submit(class="btn btn-primary") }}
